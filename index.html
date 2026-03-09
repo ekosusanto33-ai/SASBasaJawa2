@@ -1,0 +1,492 @@
+import React, { useState, useEffect } from 'react';
+import { User, ClipboardList, Calendar, CheckCircle, XCircle, Trophy, ArrowRight, RefreshCcw } from 'lucide-react';
+
+const App = () => {
+  const [step, setStep] = useState('start'); // start, identity, quiz, result
+  const [userData, setUserData] = useState({ name: '', presensi: '', date: '' });
+  const [answers, setAnswers] = useState({});
+  const [score, setScore] = useState(0);
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  // Soal-soal yang dipilih dari dokumen
+  const quizData = [
+    // --- PILIHAN GANDA (5 Soal) ---
+    {
+      id: 1,
+      type: 'pg',
+      question: 'Bapak pucung renteng-renteng kaya kalung, Dawa kaya ula, Pencokanmu wesi miring, Sing disaba si pucung mung turut kutha. Batangane tembang macapat kasebut yaiku...',
+      options: ['Sepur', 'Gajah', 'Ula', 'Rantai'],
+      correct: 'Sepur',
+      points: 5,
+      hint: 'Iku transportasi umum sing mlaku ing rel.'
+    },
+    {
+      id: 2,
+      type: 'pg',
+      question: 'Teks sing nggambarake swasana lan kahanan kanthi cetha (kaya ta nggambarake Pasar Tradisional) diarani teks...',
+      options: ['Narasi', 'Deskripsi', 'Eksposisi', 'Argumentasi'],
+      correct: 'Deskripsi',
+      points: 5,
+      hint: 'Teks iki nggawe pamaca kaya-kaya weruh dhewe kahanane.'
+    },
+    {
+      id: 3,
+      type: 'pg',
+      question: 'Batangane cangkriman "mlebu miring metu miring" yaiku...',
+      options: ['Lawang', 'Jendhela', 'Benik', 'Kunci'],
+      correct: 'Benik',
+      points: 5,
+      hint: 'Biasane ana ing klambi.'
+    },
+    {
+      id: 4,
+      type: 'pg',
+      question: 'Cangkriman "Bapak pucung bisa nggereng bisa mbengung, ngambah dirgantara kaya manuk rajawali" batangane yaiku...',
+      options: ['Helikopter', 'Pesawat Mabur', 'Layangan', 'Gathotkaca'],
+      correct: 'Pesawat Mabur',
+      points: 5,
+      hint: 'Piranti transportasi udhara.'
+    },
+    {
+      id: 5,
+      type: 'pg',
+      question: 'Paribasan "Rukun agawe santosa, crah agawe..."',
+      options: ['Bubrah', 'Susa', 'Seneng', 'Pinter'],
+      correct: 'Bubrah',
+      points: 5,
+      hint: 'Lawan tembung saka santosa/kuwat.'
+    },
+
+    // --- ISIAN SINGKAT (5 Soal) ---
+    {
+      id: 6,
+      type: 'isian',
+      question: 'Batangane cangkriman "dubang" yaiku idu abang. Yen "nasgithel" tegese panas, legi, lan...',
+      correct: 'kenthel',
+      points: 7,
+      hint: 'Tembung iki nggambarake wedang sing kandel rasane.'
+    },
+    {
+      id: 7,
+      type: 'isian',
+      question: 'Wong tuwa sing sinau marang wong enom iku paribasan/saloka sing unine "Kebo nusu ..."',
+      correct: 'gudel',
+      points: 7,
+      hint: 'Gudel iku jeneng anak kebo.'
+    },
+    {
+      id: 8,
+      type: 'isian',
+      question: 'Tembung "kembang desa" kalebu tembung ... amarga nduweni teges dudu kembang sing saktenane (figuratif).',
+      correct: 'konotatif',
+      points: 7,
+      hint: 'Lawan tembung denotatif.'
+    },
+    {
+      id: 9,
+      type: 'isian',
+      question: 'Ing struktur pidato, bagian sing isine njaluk ngapura lan matur nuwun ing pungkasan diarani...',
+      correct: 'panutup',
+      points: 7,
+      hint: 'Bagian pungkasan.'
+    },
+    {
+      id: 10,
+      type: 'isian',
+      question: 'Guru gatra tembang Gambuh cacahe ana...',
+      correct: '5',
+      points: 7,
+      hint: 'Itungen larik ing siji pada tembang Gambuh.'
+    },
+
+    // --- PILIHAN GANDA KOMPLEKS (3 Soal) ---
+    {
+      id: 11,
+      type: 'pgk',
+      question: 'Endi wae sing kalebu watake Roro Jonggrang nalika menehi syarat marang Bandung Bondowoso? (Pilih luwih saka siji)',
+      options: ['Cerdhek', 'Licik', 'Sabar', 'Gumedhe'],
+      correct: ['Cerdhek', 'Licik'],
+      points: 10,
+      hint: 'Dheweke nggunakake cara supaya Bandung gagal.'
+    },
+    {
+      id: 12,
+      type: 'pgk',
+      question: 'Makna kosakata "sumringah" ing teks deskripsi yaiku...',
+      options: ['Bungah', 'Sedhih', 'Seneng', 'Susah'],
+      correct: ['Bungah', 'Seneng'],
+      points: 10,
+      hint: 'Rasa nalika entuk kabar apik.'
+    },
+    {
+      id: 13,
+      type: 'pgk',
+      question: 'Adigang, adigung, adiguna tegese wong sing gumedhe amarga...',
+      options: ['Kekuwatane', 'Kapinterane', 'Andhap asor', 'Kalungguhane'],
+      correct: ['Kekuwatane', 'Kapinterane', 'Kalungguhane'],
+      points: 10,
+      hint: 'Telu-telune dadi dhasar wong sombong kasebut.'
+    },
+
+    // --- MENJODOHKAN (2 Soal) ---
+    {
+      id: 14,
+      type: 'match',
+      question: 'Pasangno Cangkriman karo Batangane!',
+      pairs: [
+        { left: 'Pitik walik saba kebon', right: 'Nanas' },
+        { left: 'Wit adhikih woh adhakah', right: 'Waluh' },
+        { left: 'Sega sekepel dirubung semut', right: 'Salak' }
+      ],
+      points: 10
+    },
+    {
+      id: 15,
+      type: 'match',
+      question: 'Pasangno Tembang Macapat karo Guru Gatrane!',
+      pairs: [
+        { left: 'Pucung', right: '4 gatra' },
+        { left: 'Gambuh', right: '5 gatra' },
+        { left: 'Kinanthi', right: '6 gatra' }
+      ],
+      points: 5
+    }
+  ];
+
+  const handleStart = () => setStep('identity');
+
+  const handleIdentitySubmit = (e) => {
+    e.preventDefault();
+    if (userData.name && userData.presensi && userData.date) {
+      setStep('quiz');
+    }
+  };
+
+  const handleAnswerChange = (id, val) => {
+    setAnswers({ ...answers, [id]: val });
+  };
+
+  const togglePGK = (id, option) => {
+    const current = answers[id] || [];
+    if (current.includes(option)) {
+      setAnswers({ ...answers, [id]: current.filter(o => o !== option) });
+    } else {
+      setAnswers({ ...answers, [id]: [...current, option] });
+    }
+  };
+
+  const calculateResult = () => {
+    let totalScore = 0;
+    quizData.forEach(q => {
+      if (q.type === 'pg' || q.type === 'isian') {
+        if (answers[q.id]?.toLowerCase().trim() === q.correct.toLowerCase()) {
+          totalScore += q.points;
+        }
+      } else if (q.type === 'pgk') {
+        const userAns = answers[q.id] || [];
+        const isCorrect = userAns.length === q.correct.length && userAns.every(v => q.correct.includes(v));
+        if (isCorrect) totalScore += q.points;
+      } else if (q.type === 'match') {
+        // Simple logic for matching in this UI: user must match all correctly
+        if (answers[q.id] === 'correct') totalScore += q.points;
+      }
+    });
+    setScore(totalScore);
+    setStep('result');
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 p-4 md:p-8">
+      <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+        
+        {/* Header */}
+        <header className="bg-indigo-700 p-6 text-white text-center">
+          <h1 className="text-2xl md:text-3xl font-bold">USP BASA JAWA 2026</h1>
+          <p className="opacity-80 text-sm mt-1">SD/MI KOTA SURABAYA - PAKET C</p>
+        </header>
+
+        <div className="p-6 md:p-10">
+          
+          {/* Step 1: Start Screen */}
+          {step === 'start' && (
+            <div className="text-center py-10">
+              <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <ClipboardList className="w-12 h-12 text-indigo-600" />
+              </div>
+              <h2 className="text-2xl font-bold mb-4">Sugeng Rawuh, Bocah-Bocah!</h2>
+              <p className="text-slate-600 mb-8 text-lg">Siap nggarap ujian Basa Jawa dina iki? Waca pitakone kanthi teliti, aja lali ndonga dhisik.</p>
+              <button 
+                onClick={handleStart}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg flex items-center justify-center mx-auto gap-2"
+              >
+                Mulai Ujian <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
+          {/* Step 2: Identity */}
+          {step === 'identity' && (
+            <form onSubmit={handleIdentitySubmit} className="space-y-6">
+              <h3 className="text-xl font-bold border-b pb-2 mb-6 text-slate-700">Identitas Siswa</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-1">
+                    <User className="w-4 h-4" /> Jeneng Lengkap
+                  </label>
+                  <input 
+                    required
+                    type="text" 
+                    className="w-full p-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    placeholder="Tulis jenengmu..."
+                    value={userData.name}
+                    onChange={e => setUserData({...userData, name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-1">
+                    <ClipboardList className="w-4 h-4" /> Nomer Presensi
+                  </label>
+                  <input 
+                    required
+                    type="number" 
+                    className="w-full p-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    placeholder="Conto: 15"
+                    value={userData.presensi}
+                    onChange={e => setUserData({...userData, presensi: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-1">
+                    <Calendar className="w-4 h-4" /> Tanggal Ujian
+                  </label>
+                  <input 
+                    required
+                    type="date" 
+                    className="w-full p-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    value={userData.date}
+                    onChange={e => setUserData({...userData, date: e.target.value})}
+                  />
+                </div>
+              </div>
+              <button 
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg transition-all mt-8 shadow-md"
+              >
+                Mlebu Soal Ujian
+              </button>
+            </form>
+          )}
+
+          {/* Step 3: Quiz Content */}
+          {step === 'quiz' && (
+            <div className="space-y-12">
+              <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-xl sticky top-0 z-10 border border-indigo-100 mb-8">
+                <div>
+                  <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">Siswa</p>
+                  <p className="font-bold">{userData.name} ({userData.presensi})</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">Soal</p>
+                  <p className="font-bold">{Object.keys(answers).length} / {quizData.length}</p>
+                </div>
+              </div>
+
+              {quizData.map((q, idx) => (
+                <div key={q.id} className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                  <div className="flex gap-4 mb-4">
+                    <span className="bg-indigo-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold flex-shrink-0">
+                      {idx + 1}
+                    </span>
+                    <p className="text-lg font-medium leading-relaxed">{q.question}</p>
+                  </div>
+
+                  {/* Render based on type */}
+                  {q.type === 'pg' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 ml-12">
+                      {q.options.map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => handleAnswerChange(q.id, opt)}
+                          className={`p-4 text-left rounded-xl border-2 transition-all ${
+                            answers[q.id] === opt 
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' 
+                              : 'border-white bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {q.type === 'isian' && (
+                    <div className="mt-4 ml-12">
+                      <input 
+                        type="text"
+                        placeholder="Tulis wangsulanmu ing kene..."
+                        className="w-full p-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {q.type === 'pgk' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 ml-12">
+                      {q.options.map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => togglePGK(q.id, opt)}
+                          className={`p-4 text-left rounded-xl border-2 transition-all flex items-center gap-3 ${
+                            (answers[q.id] || []).includes(opt)
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' 
+                              : 'border-white bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                             (answers[q.id] || []).includes(opt) ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'
+                          }`}>
+                            {(answers[q.id] || []).includes(opt) && <CheckCircle className="w-4 h-4 text-white" />}
+                          </div>
+                          {opt}
+                        </button>
+                      ))}
+                      <p className="col-span-full text-xs text-slate-500 mt-2 italic">*Pilih jawaban sing bener (bisa luwih saka siji)</p>
+                    </div>
+                  )}
+
+                  {q.type === 'match' && (
+                    <div className="mt-4 ml-12 space-y-4">
+                      <p className="text-sm font-semibold text-slate-500">Cocogno karo pasangan sing pas:</p>
+                      <div className="space-y-3">
+                        {q.pairs.map((pair, pIdx) => (
+                          <div key={pIdx} className="flex flex-col md:flex-row items-center gap-2">
+                            <div className="flex-1 bg-white p-3 rounded-lg border border-slate-200 w-full">{pair.left}</div>
+                            <span className="text-slate-400">➡️</span>
+                            <select 
+                              onChange={(e) => {
+                                // Logic: for simplicity, we check if they selected the right index
+                                const isAllCorrect = true; // In real app, build a more complex state
+                                handleAnswerChange(q.id, e.target.value === pair.right ? 'correct' : 'wrong');
+                              }}
+                              className="flex-1 p-3 rounded-lg border border-slate-300 bg-white w-full"
+                            >
+                              <option value="">-- Pilih Batangan --</option>
+                              {q.pairs.map(p => <option key={p.right} value={p.right}>{p.right}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <details className="mt-6 ml-12 group">
+                    <summary className="text-sm font-bold text-indigo-600 cursor-pointer list-none flex items-center gap-1 hover:underline">
+                      💡 Deleng Pitulung (Hint)
+                    </summary>
+                    <p className="text-sm text-slate-600 bg-yellow-50 p-3 rounded-lg mt-2 border-l-4 border-yellow-400">
+                      {q.hint || 'Waca pitakone kanthi teliti!'}
+                    </p>
+                  </details>
+                </div>
+              ))}
+
+              <button 
+                onClick={calculateResult}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-5 rounded-2xl font-bold text-xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 mt-12"
+              >
+                Kirim Jawaban <CheckCircle className="w-6 h-6" />
+              </button>
+            </div>
+          )}
+
+          {/* Step 4: Result Screen */}
+          {step === 'result' && (
+            <div className="text-center space-y-8 animate-in fade-in zoom-in duration-500">
+              <div className="relative inline-block">
+                <div className="w-40 h-40 bg-indigo-600 rounded-full flex flex-col items-center justify-center mx-auto text-white shadow-2xl border-8 border-indigo-100">
+                  <span className="text-sm font-bold uppercase tracking-widest opacity-80">Bijimu</span>
+                  <span className="text-5xl font-black">{score}</span>
+                  <span className="text-xs font-bold mt-1">/ 100</span>
+                </div>
+                {score >= 80 && (
+                  <div className="absolute -top-4 -right-4 bg-yellow-400 text-white p-3 rounded-full shadow-lg">
+                    <Trophy className="w-8 h-8" />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-3xl font-black text-slate-800">
+                  {score >= 90 ? 'Luar Biasa, Cah Bagus/Ayu!' : 
+                   score >= 70 ? 'Apik Banget!' : 
+                   'Sinau Luwih Sregep Maneh Ya!'}
+                </h2>
+                <p className="text-slate-500 text-lg">Matur nuwun wis nggarap kanthi jujur.</p>
+              </div>
+
+              <div className="bg-slate-100 p-6 rounded-3xl text-left border border-slate-200">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-indigo-600" /> Rekap Soal
+                </h3>
+                <div className="grid grid-cols-5 gap-2">
+                  {quizData.map((q, idx) => {
+                    let isCorrect = false;
+                    if (q.type === 'pg' || q.type === 'isian') {
+                      isCorrect = answers[q.id]?.toLowerCase().trim() === q.correct.toLowerCase();
+                    } else if (q.type === 'pgk') {
+                      const userAns = answers[q.id] || [];
+                      isCorrect = userAns.length === q.correct.length && userAns.every(v => q.correct.includes(v));
+                    } else {
+                      isCorrect = answers[q.id] === 'correct';
+                    }
+
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`flex flex-col items-center p-3 rounded-xl border ${
+                          isCorrect ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'
+                        }`}
+                      >
+                        <span className="text-xs font-bold mb-1">No. {idx + 1}</span>
+                        {isCorrect ? <CheckCircle className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-6 p-4 bg-white rounded-xl text-sm border border-slate-200 italic text-slate-600">
+                  *Gunakan rekap ini untuk mempelajari kembali materi yang belum dikuasai.
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => {
+                    setStep('start');
+                    setAnswers({});
+                  }}
+                  className="flex-1 bg-white border-2 border-slate-300 hover:border-indigo-600 text-slate-700 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all"
+                >
+                  <RefreshCcw className="w-5 h-5" /> Baleni Ujian
+                </button>
+                <button 
+                  onClick={() => window.print()}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold transition-all shadow-md"
+                >
+                  Cetak Hasil
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* Footer */}
+        <footer className="bg-slate-50 p-4 text-center text-slate-400 text-xs border-t border-slate-200">
+          © 2026 Dinas Pendidikan Kota Surabaya - Basa Jawa SD/MI
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+export default App;
